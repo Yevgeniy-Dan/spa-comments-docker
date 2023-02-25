@@ -19,13 +19,13 @@ const socket = io({
 
 export const apiSlice = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({ baseUrl: "/comments" }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/comments" }),
   tagTypes: ["Comment"],
   endpoints: (builder) => ({
     getComments: builder.query({
       query: (params: Params | null) => ({
         url:
-          `${process.env.REACT_APP_API_BASE_URL}/comments` +
+          `${process.env.REACT_APP_API_BASE_URL}/api/comments` +
           `${
             params
               ? `?page=${params?.page.toString()}&sortBy=${
@@ -62,7 +62,7 @@ export const apiSlice = createApi({
     }),
     addNewComment: builder.mutation({
       query: (data) => ({
-        url: `${process.env.REACT_APP_API_BASE_URL}/comments/add-comment${
+        url: `${process.env.REACT_APP_API_BASE_URL}/api/comments/add-comment${
           data.parentId ? "/" + data.parentId : ""
         }`,
         method: "POST",
