@@ -1,9 +1,8 @@
 const path = require("path");
 const cors = require("cors");
-require("dotenv").config();
 
 const express = require("express");
-const connectDB = require("./config/db");
+const connectDB = require("./config/dbconnect");
 
 const errorController = require("./controllers/error");
 
@@ -16,6 +15,10 @@ const { upload, postFile } = require("./util/storage");
 connectDB();
 
 const app = express();
+
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
 
 app.use(
   cors({
@@ -43,6 +46,8 @@ if (process.env.NODE_ENV === "production") {
 app.use(errorController.get404);
 app.use(errorHandler);
 
-const server = app.listen(process.env.NODE_DOCKER_PORT || 8080);
+const server = app.listen(
+  process.env.NODE_DOCKER_PORT || process.env.PORT || 8080
+);
 const io = require("./socket").init(server);
 io.on("connection", (socket) => {});

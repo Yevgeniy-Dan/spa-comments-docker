@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@hcaptcha/react-hcaptcha": "^1.4.4",
     "@reduxjs/toolkit": "^1.9.2",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
@@ -29,11 +28,16 @@
     "uuid": "^9.0.0",
     "web-vitals": "^2.1.4"
   },
+  "engines": {
+    "node": "16.13.2",
+    "npm": "8.1.2"
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install  && npm run build"
   },
   "eslintConfig": {
     "extends": [
@@ -53,11 +57,11 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8080",
   "devDependencies": {
     "@types/fslightbox-react": "^1.4.2",
     "@types/react-bootstrap-table-next": "^4.0.18",
     "@types/react-google-recaptcha": "^2.1.5",
-    "@types/uuid": "^9.0.0"
+    "@types/uuid": "^9.0.0",
+    "@hcaptcha/react-hcaptcha": "^1.4.4"
   }
 }
