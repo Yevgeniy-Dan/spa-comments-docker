@@ -49,5 +49,11 @@ app.use(errorHandler);
 const server = app.listen(
   process.env.NODE_DOCKER_PORT || process.env.PORT || 8080
 );
-const io = require("./socket").init(server);
+const io = require("./socket").init(server, {
+  cors: {
+    origin: process.env.CLIENT_ORIGIN,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
 io.on("connection", (socket) => {});

@@ -58,10 +58,10 @@
     ]
   },
   "devDependencies": {
+    "@hcaptcha/react-hcaptcha": "^1.4.4",
     "@types/fslightbox-react": "^1.4.2",
     "@types/react-bootstrap-table-next": "^4.0.18",
     "@types/react-google-recaptcha": "^2.1.5",
-    "@types/uuid": "^9.0.0",
-    "@hcaptcha/react-hcaptcha": "^1.4.4"
+    "@types/uuid": "^9.0.0"
   }
 }

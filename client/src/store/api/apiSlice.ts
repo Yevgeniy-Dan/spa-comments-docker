@@ -14,6 +14,7 @@ interface Params {
 
 const socket = io({
   host: `${process.env.REACT_APP_API_BASE_URL}`,
+  withCredentials: true,
 });
 
 export const apiSlice = createApi({
