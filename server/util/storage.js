@@ -25,9 +25,8 @@ const fileStorage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname);
   if (ext !== ".png" && ext !== ".jpg" && ext !== ".gif" && ext !== ".txt") {
-    const error = new Error("Valid file extensions: [.png, .gif, .jpg, .txt]");
-    error.statusCode = 422;
-    return cb(error);
+    req.fileValidationError = true;
+    return cb(null, false);
   }
   cb(null, true);
 };
@@ -38,6 +37,11 @@ exports.upload = multer({
 });
 
 exports.postFile = asyncHandler(async (req, res, next) => {
+  if (req.fileValidationError) {
+    const error = new Error(" Valid file extensions: [.png, .gif, .jpg, .txt]");
+    error.statusCode = 422;
+    throw error;
+  }
   if (req.file) {
     const filePath = req.file.path.replace("\\", "/");
 
@@ -90,6 +94,7 @@ const uploadToAWSS3 = (upload, req, res, next) => {
     if (err) {
       return res.status(422).json({
         message: "There was an error uploading a file",
+        error: err,
       });
     } else {
       req.body.uploadUrl = uploadRes.Location; //save in req.body the url to the stored file

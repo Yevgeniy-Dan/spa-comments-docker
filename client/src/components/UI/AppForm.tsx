@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
 import { Col, FloatingLabel, Form, Row } from "react-bootstrap";
-// import HCaptcha from "@hcaptcha/react-hcaptcha";
 import ReCAPTCHA from "react-google-recaptcha";
 
 import Comment from "../../models/comment";
 import TagButtonPanel from "./TagButtonPanel";
 import { useAppDispatch, useAppSelector } from "../../hooks/redux";
 import { ParentComment, ReplyComment } from "../../types/comment";
-import api from "../../http";
 import AppSpinner from "./AppSpinner";
-import { useAddNewCommentMutation } from "../../store/api/apiSlice";
+import apiSlice, { useAddNewCommentMutation } from "../../store/api/apiSlice";
 import { commentSliceActions } from "../../store/comments/comment-slice";
 import { getMessage } from "../../utils/getMessage";
+import "./AppForm.css";
+import classNames from "classnames";
 
 const AppForm = () => {
   const dispatch = useAppDispatch();
@@ -206,8 +206,12 @@ const AppForm = () => {
     }
   };
 
+  const containerClassName = classNames("form-container", {
+    disabled: isLoading,
+  });
+
   return (
-    <div className="container">
+    <div className={`container ${containerClassName}`}>
       {isPreviewLoading && <AppSpinner />}
       <div className="col-md-7 col-lg-8 mx-auto">
         <h4 className="mb-3 text-center">
@@ -322,19 +326,18 @@ const AppForm = () => {
                   handleVerificationToken(token);
                 }}
                 onExpired={() => {
-                  console.log("OK");
                   setCapthcaIsExpired(true);
                 }}
               />
               {!token && validated && (
                 <p className="text-danger">
-                  This is hCaptcha for human testing.
+                  This is reCaptcha for human testing.
                 </p>
               )}
 
               {!token && captchaIsExpired && (
                 <p className="text-danger">
-                  The hCaptcha for human testing has expired.
+                  The reCaptcha for human testing has expired.
                 </p>
               )}
             </Form.Group>

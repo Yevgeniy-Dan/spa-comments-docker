@@ -1,6 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import io from "socket.io-client";
-import { useAppDispatch } from "../../hooks/redux";
 import { CommentsResponse } from "../../models/response/CommentResponse";
 import { SortParams } from "../../types/sort";
 import { commentSliceActions } from "../comments/comment-slice";

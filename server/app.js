@@ -12,18 +12,18 @@ const bodyParser = require("body-parser");
 const commentRoutes = require("./routes/comment");
 const { upload, postFile } = require("./util/storage");
 
-connectDB();
-
 const app = express();
 
 if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 
+connectDB();
+
 app.use(
   cors({
     credentials: true,
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:8081",
+    origin: process.env.CLIENT_ORIGIN,
   })
 );
 
