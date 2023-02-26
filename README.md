@@ -63,8 +63,9 @@ Go to https://www.google.com/recaptcha/about/ and create your access and secret 
 
 1. Clone repo on local machine
 2. Create an .env in the root folder and fill in the blank fields based on the .env.sample
-3. Run docker-compose up in the root folder with admin privileges
-4. Now you can move to localhost:8888 and test the app
+3. Run ```docker-compose up``` in the root folder with admin privileges
+4. If you are making changes and want to recontain them, call docker-compose build and after completion again ```docker-compose up```
+5. Now you can move to localhost:8888 and test the app
 
 # For Local Development
 1. Clone repo on local machine
