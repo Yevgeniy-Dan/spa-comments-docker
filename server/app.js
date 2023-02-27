@@ -49,11 +49,7 @@ app.use(errorHandler);
 const server = app.listen(
   process.env.NODE_DOCKER_PORT || process.env.PORT || 8080
 );
-const io = require("./socket").init(server, {
-  cors: {
-    origin: process.env.CLIENT_ORIGIN,
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
+const io = require("./socket").init(server);
+io.on("connection", (socket) => {
+  console.log("User connected ");
 });
-io.on("connection", (socket) => {});

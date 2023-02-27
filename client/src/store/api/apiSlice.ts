@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import io from "socket.io-client";
+import * as io from "socket.io-client";
 import { CommentsResponse } from "../../models/response/CommentResponse";
 import { SortParams } from "../../types/sort";
 import { commentSliceActions } from "../comments/comment-slice";
@@ -11,11 +11,6 @@ interface Params {
   sortParams: SortParams;
   page: number;
 }
-
-const socket = io({
-  host: `${process.env.REACT_APP_API_BASE_URL}`,
-  withCredentials: true,
-});
 
 export const apiSlice = createApi({
   reducerPath: "api",
@@ -40,6 +35,9 @@ export const apiSlice = createApi({
         arg,
         { updateCachedData, cacheDataLoaded, cacheEntryRemoved }
       ) {
+        const socket = io.connect(`${process.env.REACT_APP_API_BASE_URL}`, {
+          withCredentials: true,
+        });
         try {
           await cacheDataLoaded;
 

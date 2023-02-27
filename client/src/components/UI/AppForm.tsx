@@ -7,7 +7,7 @@ import TagButtonPanel from "./TagButtonPanel";
 import { useAppDispatch, useAppSelector } from "../../hooks/redux";
 import { ParentComment, ReplyComment } from "../../types/comment";
 import AppSpinner from "./AppSpinner";
-import apiSlice, { useAddNewCommentMutation } from "../../store/api/apiSlice";
+import { useAddNewCommentMutation } from "../../store/api/apiSlice";
 import { commentSliceActions } from "../../store/comments/comment-slice";
 import { getMessage } from "../../utils/getMessage";
 import "./AppForm.css";
@@ -124,8 +124,8 @@ const AppForm = () => {
         uploadUrl: uploadFile,
         userName: usernameInputRef.current!.value,
       };
-      //show preview comment
 
+      //show preview comment
       dispatch(commentSliceActions.addPreviewComment(parentCommentPreview));
     } else {
       replyPreview = {
@@ -196,6 +196,7 @@ const AppForm = () => {
     formRef.current!.reset();
     setToken(null);
     setCapthcaIsExpired(false);
+    dispatch(commentSliceActions.setPostParentId(null));
     captchaRef.current!.reset();
   };
 
