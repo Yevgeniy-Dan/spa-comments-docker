@@ -14,9 +14,6 @@ const s3 = new aws.S3({
 });
 
 const fileStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, `uploads`);
-  },
   filename: function (req, file, cb) {
     cb(null, uuidv4() + path.extname(file.originalname));
   },
