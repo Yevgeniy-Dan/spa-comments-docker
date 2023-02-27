@@ -61,6 +61,8 @@ Go to https://www.google.com/recaptcha/about/ and create your access and secret 
 
 # Docker
 
+Before you start working with docker, make sure you have it installed
+
 1. Clone repo on local machine
 2. Create an .env in the root folder and fill in the blank fields based on the .env.sample
 3. Run ```docker-compose up``` in the root folder with admin privileges
