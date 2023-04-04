@@ -1,7 +1,7 @@
-import { ReplyComment } from "../types/comment";
+import { Comment as CommentType } from "../types/comment";
 
-const isReply = (comment: any): comment is ReplyComment => {
-  return (comment as ReplyComment).replyToUsername !== undefined;
+const isReply = (comment: any): comment is CommentType => {
+  return (comment as CommentType).replyToUsername !== undefined;
 };
 
 export default isReply;

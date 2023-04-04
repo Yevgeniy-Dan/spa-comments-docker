@@ -1,12 +1,12 @@
-import { ParentComment, ReplyComment } from "../../types/comment";
+import { Comment as CommentType } from "../../types/comment";
 
 export interface CommentResponse {
-  comment: ParentComment;
-  reply: ReplyComment;
+  comment: CommentType;
+  reply: CommentType;
 }
 
 export interface CommentsResponse {
-  comments: ParentComment[];
-  replies: ReplyComment[];
+  comments: CommentType[];
+  replies: CommentType[];
   totalItems: number;
 }

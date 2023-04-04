@@ -1,4 +1,4 @@
-const sequelize = require("../util/database");
+const sequelize = require("../utils/database");
 
 const Comment = require("../models/comment");
 const ReplyTo = require("../models/replyTo");
@@ -24,7 +24,10 @@ const connectDB = async () => {
     await Comment.sync();
     await ReplyTo.sync();
   } catch (error) {
-    console.error("Unable to connect to the database:", error);
+    console.error(
+      "This error is in the dbconnect file. Unable to connect to the database:",
+      error
+    );
     process.exit(1);
   }
 };

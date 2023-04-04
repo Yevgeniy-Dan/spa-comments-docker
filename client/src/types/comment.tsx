@@ -1,26 +1,16 @@
-export type ParentComment = {
-  id: string;
+export type Comment = {
+  id: number;
   userName: string;
   email: string;
   homePage: string | null;
   uploadUrl: string | File | null;
   text: string;
   createdAt: string;
+  updatedAt: string;
+  parentId: number | null;
   isPreview: boolean | null;
-};
-
-export type ReplyComment = {
-  replyId: string;
-  commentId: string;
-  id: string;
   replyToUsername: string;
-  userName: string;
-  email: string;
-  homePage: string | null;
-  uploadUrl: string | File | null;
-  text: string;
-  createdAt: string;
-  isPreview: boolean | null;
+  isOpenAttachments: boolean;
 };
 
 export type SortBy = "date" | "email" | "username";

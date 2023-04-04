@@ -5,7 +5,7 @@ class Comment {
   captchaToken: string;
   homepage?: string | null;
   upload?: File | null;
-  parentId?: string | null;
+  parentId?: number | null;
   isPreview?: boolean;
 
   constructor(
@@ -15,7 +15,7 @@ class Comment {
     captchaToken: string,
     homepage: string | null,
     upload: File | null,
-    parentId: string | null,
+    parentId: number | null,
     isPreview?: boolean
   ) {
     this.userName = userName;

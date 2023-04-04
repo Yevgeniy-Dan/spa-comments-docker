@@ -1,7 +1,40 @@
+# FROM node:16
+
+# WORKDIR /app/client
+
+# COPY ./client/package*.json ./
+
+# RUN npm install --force
+
+# COPY ./client .
+
+# ENV REACT_APP_RECAPTCHA_SITEKEY=6Lc5UK0kAAAAAHt3ZFgiQQ38kgxwEj2eNxn2xtp2
+# ENV REACT_APP_API_BASE_URL=http://localhost:8080
+
+# CMD [ "npm", "start" ]
+
+# -------------------------------------------------------------------------
+
+# FROM node:16
+
+# WORKDIR /app
+
+# COPY package*.json ./
+
+# RUN npm install --force
+
+# COPY . .
+
+# EXPOSE 3000
+
+# CMD [ "npm", "start" ]
+
+# --------------------------------
+
 FROM node:16 as build-stage
 
 WORKDIR /client
-COPY package.json .
+COPY package*.json .
 RUN npm install --force
 COPY . .
 

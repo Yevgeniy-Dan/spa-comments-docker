@@ -1,15 +1,17 @@
 import React from "react";
-import { ParentComment, ReplyComment } from "../../../types/comment";
-import isReply from "../../../utils/isReplyType";
+import { Comment as CommentType } from "../../../types/comment";
+import { useAppDispatch } from "../../../hooks/redux";
+import { commentSliceActions } from "../../../store/comments/comment-slice";
 
 const CommentItem: React.FC<
   React.PropsWithChildren<{
-    comment: ParentComment | ReplyComment | null;
-    onReply: (parent: ParentComment) => void;
+    comment: CommentType | CommentType | null;
     onToggleAttachments?: () => void | null;
     isOpenAttachments: boolean;
   }>
-> = ({ comment, onReply, onToggleAttachments, isOpenAttachments }) => {
+> = ({ comment, onToggleAttachments, isOpenAttachments }) => {
+  const dispatch = useAppDispatch();
+
   const getTime = (date: Date) => {
     return (
       new Date(comment!.createdAt).getHours() +
@@ -18,9 +20,18 @@ const CommentItem: React.FC<
     );
   };
 
+  const onHandleReply = (comment: CommentType) => {
+    dispatch(
+      commentSliceActions.setPostParentId({
+        parentId: comment.id,
+        userName: comment.userName,
+      })
+    );
+  };
+
   return (
     <>
-      <div className={`card p-3 flex-grow-1 flex-shrink-1`}>
+      <div className={`card p-3 flex-grow-1 flex-shrink-1 mb-2`}>
         <div className="d-flex justify-content-between align-items-start">
           <div className="d-flex flex-row align-items-center text-break">
             <span>
@@ -28,7 +39,8 @@ const CommentItem: React.FC<
                 {comment!.userName}
               </small>
               <small className="fw-bold text-primary mx-1">
-                {isReply(comment) && `@${comment.replyToUsername}`}
+                {comment?.parentId &&
+                  `@${comment?.replyToUsername || "HERE MUST BE USERNAME"}`}
               </small>
               <small
                 dangerouslySetInnerHTML={{ __html: comment!.text }}
@@ -45,7 +57,11 @@ const CommentItem: React.FC<
 
         <div className="action d-flex justify-content-between mt-2 align-items-center">
           <div className="reply">
-            <small onClick={() => onReply(comment!)}>Reply</small>
+            {comment?.isPreview ? (
+              <small>Reply</small>
+            ) : (
+              <small onClick={() => onHandleReply(comment!)}>Reply</small>
+            )}
           </div>
         </div>
         <div>

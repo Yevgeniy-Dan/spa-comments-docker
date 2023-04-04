@@ -4,18 +4,17 @@ import BootstrapTable from "react-bootstrap-table-next";
 
 import { useAppDispatch, useAppSelector } from "../../../hooks/redux";
 import { commentSliceActions } from "../../../store/comments/comment-slice";
-import { ParentComment, SortBy, SortOrder } from "../../../types/comment";
+import { SortBy, SortOrder } from "../../../types/comment";
 import { useGetCommentsQuery } from "../../../store/api/apiSlice";
 import AppSpinner from "../AppSpinner";
-import Comment from "./Comment";
 import Paginator from "../Paginator";
 
 import constants from "../../../constants";
 import "./Comments.css";
 import { SortParams } from "../../../types/sort";
-import { getMessage } from "../../../utils/getMessage";
+import RenderComments from "./RenderComments";
 
-const Comments: React.FC<React.PropsWithChildren<{}>> = ({}) => {
+const Comments: React.FC = () => {
   const [sortParams, setSortParams] = useState<SortParams>({
     sortBy: "date",
     sortOrder: "desc",
@@ -60,7 +59,7 @@ const Comments: React.FC<React.PropsWithChildren<{}>> = ({}) => {
         clearInterval(interval);
       }
     }, 100);
-  }, [firstCommentRef]);
+  }, [firstCommentRef, dispatch]);
 
   const getSortedComments = (
     sortByValue: SortBy,
@@ -132,25 +131,12 @@ const Comments: React.FC<React.PropsWithChildren<{}>> = ({}) => {
     if (isError) console.log(message);
   }, [isError, message]);
 
-  const onHandleReply = (parent: ParentComment) => {
-    dispatch(
-      commentSliceActions.setPostParentId({
-        parentId: parent.id,
-        userName: parent.userName,
-      })
-    );
-  };
-
   let content;
 
   if (isLoading) {
     content = <AppSpinner />;
   } else if (isSuccess) {
-    let updatedComments = comments.comments;
-    if (previewComment && currentPage === 1)
-      updatedComments = [previewComment, ...comments.comments];
-
-    if (updatedComments.length > 0) {
+    if (comments.comments.length > 0) {
       const renderedComents = (
         <div ref={firstCommentRef}>
           <>
@@ -159,15 +145,14 @@ const Comments: React.FC<React.PropsWithChildren<{}>> = ({}) => {
                 bootstrap4
                 keyField="id"
                 bordered={false}
-                data={updatedComments}
+                data={comments.comments}
                 columns={columns}
                 wrapperClasses="table-responsive"
               />
             </>
 
-            {updatedComments.map((c: ParentComment) => {
-              return <Comment comment={c} key={c.id} onReply={onHandleReply} />;
-            })}
+            <RenderComments comments={comments.comments} />
+
             <Paginator
               currentPage={currentPage}
               lastPage={Math.ceil(comments.totalItems / constants.perPage)}
@@ -192,7 +177,7 @@ const Comments: React.FC<React.PropsWithChildren<{}>> = ({}) => {
     }
   } else if (isError) {
     console.log(error);
-    content = <div>An error has occurred</div>
+    content = <div>An error has occurred</div>;
     // content = <div>{getMessage(error)}</div>;
   }
 

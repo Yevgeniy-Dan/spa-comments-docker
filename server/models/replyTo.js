@@ -1,6 +1,6 @@
 const Sequelize = require("sequelize");
 
-const sequelize = require("../util/database");
+const sequelize = require("../utils/database");
 const Comment = require("./comment");
 
 const ReplyTo = sequelize.define("replyTo", {

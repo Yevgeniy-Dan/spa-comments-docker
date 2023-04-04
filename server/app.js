@@ -10,7 +10,7 @@ const { errorHandler } = require("./middleware/error");
 const bodyParser = require("body-parser");
 
 const commentRoutes = require("./routes/comment");
-const { upload, postFile } = require("./util/storage");
+const { upload, postFile } = require("./utils/storage");
 
 const app = express();
 

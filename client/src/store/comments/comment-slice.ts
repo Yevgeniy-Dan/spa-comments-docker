@@ -1,23 +1,20 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-import { ParentComment, ReplyComment } from "../../types/comment";
-import isReply from "../../utils/isReplyType";
+import { Comment as CommentType } from "../../types/comment";
 
 type postParent = {
-  parentId: string;
+  parentId: number;
   userName: string;
 } | null;
 
 type InitialState = {
-  previewComment: ParentComment | null;
-  previewReply: ReplyComment | null;
+  previewComment: CommentType | null;
   postParent: postParent;
   firstCommentY: any;
 };
 
 const initialState: InitialState = {
   previewComment: null,
-  previewReply: null,
   postParent: null,
   firstCommentY: null,
 };
@@ -32,21 +29,15 @@ const commentSlice = createSlice({
     },
     addPreviewComment: (
       state,
-      action: PayloadAction<ParentComment | ReplyComment>
+      action: PayloadAction<CommentType | CommentType>
     ) => {
-      state.previewComment = null;
-      state.previewReply = null;
-      if (isReply(action.payload)) {
-        state.previewReply = action.payload;
-      } else {
-        state.previewComment = action.payload;
-      }
+      state.previewComment = action.payload;
     },
     removePreviewComment: (state) => {
       state.previewComment = null;
-      state.previewReply = null;
     },
     setPostParentId: (state, action: PayloadAction<postParent | null>) => {
+      state.previewComment = null;
       if (action.payload) {
         state.postParent = {
           ...action.payload,

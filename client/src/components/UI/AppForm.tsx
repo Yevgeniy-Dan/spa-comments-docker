@@ -5,13 +5,14 @@ import ReCAPTCHA from "react-google-recaptcha";
 import Comment from "../../models/comment";
 import TagButtonPanel from "./TagButtonPanel";
 import { useAppDispatch, useAppSelector } from "../../hooks/redux";
-import { ParentComment, ReplyComment } from "../../types/comment";
+import { Comment as CommentType } from "../../types/comment";
 import AppSpinner from "./AppSpinner";
 import { useAddNewCommentMutation } from "../../store/api/apiSlice";
 import { commentSliceActions } from "../../store/comments/comment-slice";
 import { getMessage } from "../../utils/getMessage";
 import "./AppForm.css";
 import classNames from "classnames";
+import generateUniqueId from "../../utils/generateUniqueId";
 
 const AppForm = () => {
   const dispatch = useAppDispatch();
@@ -109,40 +110,23 @@ const AppForm = () => {
     e.preventDefault();
 
     setIsPreviewLoading(true);
-    let parentCommentPreview: ParentComment = {} as ParentComment;
+    let commentPreview: CommentType = {
+      id: generateUniqueId(),
+      isPreview: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      email: emailInputRef.current!.value,
+      homePage: homepageInputRef.current?.value || null,
+      text: textInputRef.current!.value,
+      uploadUrl: uploadFile,
+      userName: usernameInputRef.current!.value,
+      parentId: postParent?.parentId || null,
+      replyToUsername: postParent?.userName || "",
+      isOpenAttachments: false,
+    };
 
-    let replyPreview: ReplyComment = {} as ReplyComment;
-
-    if (!postParent?.parentId) {
-      parentCommentPreview = {
-        id: new Date().toISOString(),
-        isPreview: true,
-        createdAt: new Date().toISOString(),
-        email: emailInputRef.current!.value,
-        homePage: homepageInputRef.current?.value || null,
-        text: textInputRef.current!.value,
-        uploadUrl: uploadFile,
-        userName: usernameInputRef.current!.value,
-      };
-
-      //show preview comment
-      dispatch(commentSliceActions.addPreviewComment(parentCommentPreview));
-    } else {
-      replyPreview = {
-        commentId: postParent!.parentId,
-        replyId: "",
-        createdAt: new Date().toISOString(),
-        email: emailInputRef.current!.value,
-        homePage: homepageInputRef.current?.value || null,
-        text: textInputRef.current!.value,
-        id: new Date().toISOString(),
-        isPreview: true,
-        replyToUsername: postParent!.userName,
-        userName: usernameInputRef.current!.value,
-        uploadUrl: uploadFile,
-      };
-      dispatch(commentSliceActions.addPreviewComment(replyPreview));
-    }
+    //show preview comment
+    dispatch(commentSliceActions.addPreviewComment(commentPreview));
     window.scrollTo(0, scrollToPreview);
     setIsPreviewLoading(false);
   };
