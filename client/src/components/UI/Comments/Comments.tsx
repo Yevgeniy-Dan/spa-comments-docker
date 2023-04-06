@@ -25,7 +25,6 @@ const Comments: React.FC = () => {
     data: comments,
     isLoading,
     isFetching,
-    error,
     isError,
     isSuccess,
     error: message,
@@ -176,7 +175,6 @@ const Comments: React.FC = () => {
       content = <div className={containerClassName}>{renderedComents}</div>;
     }
   } else if (isError) {
-    console.log(error);
     content = <div>An error has occurred</div>;
     // content = <div>{getMessage(error)}</div>;
   }

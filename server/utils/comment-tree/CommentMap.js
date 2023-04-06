@@ -50,10 +50,15 @@ class CommentMap extends Map {
     return false;
   }
 
-  delete(key) {
-    const keyHash = JSON.stringify(key);
-    this.hashMap.delete(keyHash);
-    return super.delete(keyHash);
+  deleteById(id) {
+    for (let key of this.hashMap.keys()) {
+      if (key.id === id) {
+        // const value = super.get(key)
+        super.delete(key);
+        this.hashMap.delete(key);
+        // return value
+      }
+    }
   }
 
   forEach(callback, thisArgs) {

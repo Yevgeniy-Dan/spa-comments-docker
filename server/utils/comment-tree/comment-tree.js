@@ -27,8 +27,40 @@ const _CommentTree = (() => {
       this.comments.set(comment, new Set());
     }
 
+    removeComment(commentId) {
+      const childComments = this.comments.getById(commentId);
+
+      if (childComments && childComments.size > 0) {
+        throw new Error("Cannot delete a comment that has child comments.");
+      }
+
+      this.comments.deleteById(commentId);
+
+      const parentId = getObjectWithIdInReplySet(this.replyIds, commentId);
+
+      const childCommentsSet = this.comments.getById(parentId);
+
+      const deleteCommentInSet = childCommentsSet.find(
+        (c) => c.id === commentId
+      );
+
+      if (deleteCommentInSet) {
+        childCommentsSet.delete(deleteCommentInSet);
+      }
+      this.deleteReplyIdObj(commentId);
+    }
+
     addReplyIdObj(parentId, replyId) {
       this.replyIds.add({ parentId, replyId });
+    }
+
+    deleteReplyIdObj(id) {
+      for (let value of this.replyIds) {
+        if (value.replyId === id) {
+          this.replyIds.delete(value);
+          break;
+        }
+      }
     }
 
     addEdge(parentId, childId) {
@@ -132,27 +164,6 @@ const _CommentTree = (() => {
     return orderedResult;
   };
 
-  CommentTree.topologicalSort = (comments) => {
-    // Topological sort guarantees that the order is correct since the graph is acyclic (DAG)
-    const visited = {};
-    const result = [];
-
-    function visit(comment) {
-      if (visited[comment.id]) {
-        return;
-      }
-
-      visited[comment.id] = true;
-      const childComments = comments.getById(comment.id) || [];
-      [...childComments].forEach(visit);
-      result.unshift(comment);
-    }
-
-    [...comments.keys()].forEach(visit);
-
-    return result;
-  };
-
   CommentTree.sortByDate = (comments, order) => {
     //Sort build in method - Quick Sort has O(nlog(n)) Time Complexity
     comments.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
@@ -218,7 +229,9 @@ const _CommentTree = (() => {
   return CommentTree;
 })();
 
-module.exports = _CommentTree;
+const commentTree = new _CommentTree();
+
+module.exports = commentTree;
 
 const getObjectWithIdInReplySet = (set, id) => {
   for (let item of set) {

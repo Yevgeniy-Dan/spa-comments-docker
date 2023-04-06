@@ -8,148 +8,202 @@ const DOMPurify = require("isomorphic-dompurify");
 const Comment = require("../models/comment");
 const ReplyTo = require("../models/replyTo");
 const io = require("../socket");
-const CommentTree = require("../utils/comment-tree/comment-tree");
 
-exports.getComments = asyncHandler(async (req, res) => {
-  const currentPage = req.query.page || 1;
-  const sortBy = req.query.sortBy || "date";
-  const sortOrder = req.query.sortOrder || "desc";
-  const perPage = 25;
+const commentTree = require("../utils/comment-tree/comment-tree");
+let sortedComments;
+const perPage = 25;
 
-  const commentTree = new CommentTree();
+// We create an object with properties. The setSortedComments function is used to set the app.locals.sortedComments value to the sortedComments variable
 
-  const comments = await Comment.findAll();
-  const replies = await ReplyTo.findAll();
+// These functions are exported as modules, so we can import them into a file where we define our routes.
 
-  for (let r of replies) {
-    commentTree.addReplyIdObj(r.commentId, r.replyId);
-  }
+module.exports = {
+  // This function needs to be called once when starting the server (see app.js)
+  setSortedComments: (initialSortedComments) => {
+    sortedComments = initialSortedComments;
+  },
 
-  for (let c of comments) {
-    commentTree.addComment(c.dataValues);
-  }
+  getComments: asyncHandler(async (req, res) => {
+    const currentPage = req.query.page || 1;
+    const sortOrder = req.query.sortOrder || "desc";
+    const sortBy = req.query.sortBy || "date";
 
-  for (let r of replies) {
-    commentTree.addEdge(r.commentId, r.replyId);
-  }
+    sortedComments = commentTree.sort(sortBy, sortOrder);
 
-  const skippedItems = (currentPage - 1) * perPage;
-  const result = commentTree
-    .sort(sortBy, sortOrder)
-    .slice(skippedItems, perPage);
+    const skippedComments = (currentPage - 1) * perPage;
+    const paginatedComments = sortedComments.slice(skippedComments, perPage);
 
-  io.getIO().emit("comments", {
-    action: "getComments",
-    comments: result,
-    totalItems: result.length,
-  });
+    const total = sortedComments.length;
 
-  res.status(200).json({
-    message: "Success",
-    comments: result,
-    totalItems: result.length,
-  });
-});
+    io.getIO().emit("comments", {
+      action: "getComments",
+      comments: paginatedComments,
+      totalItems: sortedComments.length,
+    });
 
-exports.postComment = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
+    res.status(200).json({
+      message: "Success",
+      comments: paginatedComments,
+      totalItems: total,
+    });
+  }),
 
-  if (!errors.isEmpty()) {
-    const error = new Error(errors.array()[0].msg);
-    error.data = errors.array();
-    error.statusCode = 422;
-    throw error;
-  }
-  const isTagSuccess = await isCorrectHtmlTags(req.body.text);
+  addPreview: asyncHandler(async (req, res) => {
+    const previewComment = req.query.previewComment;
+    const sortBy = req.query.sortBy || "date";
+    const sortOrder = req.query.sortOrder || "desc";
 
-  if (!isTagSuccess) {
-    const error = new Error(
-      "Validation failed, entered text message has incorrect tags"
-    );
-    error.statusCode = 422;
-    throw error;
-  }
-
-  const parentId = req.params.parentId;
-  const { userName, email, homePage, uploadUrl, text, captchaToken } = req.body;
-
-  // Captcha verify
-
-  const recaptchaResponse = await axios.post(
-    `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`,
-    {},
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-      },
+    if (!previewComment) {
+      return res.status(404).json({
+        message: "You are not passed the 'previewComment' within 'query'",
+      });
     }
-  );
 
-  if (!recaptchaResponse.data.success) {
-    const error = new Error("The reCaptcha is invalid");
-    error.statusCode = 422;
-    throw error;
-  }
+    commentTree.addReplyIdObj(previewComment.parentId, previewComment.id);
+    commentTree.addComment(previewComment);
+    commentTree.addEdge(previewComment.parentId, previewComment.id);
+    const sortedComments = commentTree.sort(sortBy, sortOrder);
 
-  const sanitazedText = DOMPurify.sanitize(text);
-  const comment = new Comment({
-    userName,
-    email,
-    homePage,
-    uploadUrl,
-    text: sanitazedText,
-  });
+    const previewIndex = sortedComments.findIndex(
+      (c) => c.id === previewComment.id
+    );
 
-  let newComment;
+    const currentPage = Math.ceil(previewIndex / perPage);
 
-  if (parentId) {
-    const parentUser = await Comment.findByPk(parentId);
+    const total = sortedComments.length;
 
-    if (!parentUser) {
+    const skippedItems = (currentPage - 1) * perPage;
+
+    const paginatedComments = sortedComments.slice(skippedItems, perPage);
+
+    res.status(200).json({
+      message: "Success",
+      comments: paginatedComments,
+      page: currentPage,
+      totalItems: total,
+    });
+  }),
+  removePreview: asyncHandler(async (req, res) => {
+    const previewId = req.query.id;
+    const currentPage = req.query.page || 1;
+
+    if (!previewId) {
+      return res.status(404).json({
+        message: "You didn't provide a 'preview comment' id",
+      });
+    }
+
+    sortedComments = sortedComments.filter((c) => c.id !== previewId);
+
+    // Also delete previewComment node from data structure
+    commentTree.removeComment(previewId);
+    const total = sortedComments.length;
+
+    const skippedItems = (currentPage - 1) * perPage;
+
+    const paginatedComments = sortedComments.slice(skippedItems, perPage);
+
+    res.status(200).json({
+      message: "Success",
+      comments: paginatedComments,
+      totalItems: total,
+    });
+  }),
+  postComment: asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      const error = new Error(errors.array()[0].msg);
+      error.data = errors.array();
+      error.statusCode = 422;
+      throw error;
+    }
+    const isTagSuccess = await isCorrectHtmlTags(req.body.text);
+
+    if (!isTagSuccess) {
       const error = new Error(
-        "The user you want to reply to does not exist already"
+        "Validation failed, entered text message has incorrect tags"
       );
       error.statusCode = 422;
       throw error;
     }
 
-    newComment = await comment.save();
+    const parentId = req.params.parentId;
+    const { userName, email, homePage, uploadUrl, text, captchaToken } =
+      req.body;
 
-    await ReplyTo.create({
-      replyId: newComment.id,
-      commentId: parentId,
+    // Captcha verify
+
+    const recaptchaResponse = await axios.post(
+      `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`,
+      {},
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+        },
+      }
+    );
+
+    if (!recaptchaResponse.data.success) {
+      const error = new Error("The reCaptcha is invalid");
+      error.statusCode = 422;
+      throw error;
+    }
+
+    const sanitazedText = DOMPurify.sanitize(text);
+    const comment = new Comment({
+      userName,
+      email,
+      homePage,
+      uploadUrl,
+      text: sanitazedText,
     });
 
-    const { updatedAt, commentId, ...rest } = newComment.dataValues;
+    let newComment;
 
-    // io.getIO().emit("comments", {
-    //   action: "create",
-    //   reply: {
-    //     replyId: newComment.id,
-    //     commentId: parentUser.id,
-    //     replyToUsername: parentUser.userName,
-    //     ...rest,
-    //   },
-    // });
-    return res.status(201).json({
-      message: "Reply comment created successfully!",
-      reply: {
+    if (parentId) {
+      const parentUser = await Comment.findByPk(parentId);
+
+      if (!parentUser) {
+        const error = new Error(
+          "The user you want to reply to does not exist already"
+        );
+        error.statusCode = 422;
+        throw error;
+      }
+
+      newComment = await comment.save();
+
+      commentTree.addReplyIdObj(parentId, newComment.id);
+      commentTree.addComment(newComment);
+      commentTree.addEdge(parentId, newComment.id);
+
+      await ReplyTo.create({
         replyId: newComment.id,
-        commentId: parentUser.id,
-        replyToUsername: parentUser.userName,
-        ...rest,
-      },
-    });
-  } else {
-    newComment = await comment.save();
-  }
+        commentId: parentId,
+      });
 
-  // io.getIO().emit("comments", {
-  //   action: "create",
-  //   comment: newComment,
-  // });
-  return res.status(201).json({
-    message: "Comment created successfully!",
-    comment: newComment,
-  });
-});
+      const { updatedAt, commentId, ...rest } = newComment.dataValues;
+
+      return res.status(201).json({
+        message: "Reply comment created successfully!",
+        reply: {
+          replyId: newComment.id,
+          commentId: parentUser.id,
+          replyToUsername: parentUser.userName,
+          ...rest,
+        },
+      });
+    } else {
+      newComment = await comment.save();
+      commentTree.addComment(newComment);
+    }
+
+    return res.status(201).json({
+      message: "Comment created successfully!",
+      comment: newComment,
+    });
+  }),
+};
+
+module.exports.sortedComments = sortedComments;

@@ -11,6 +11,8 @@ const bodyParser = require("body-parser");
 
 const commentRoutes = require("./routes/comment");
 const { upload, postFile } = require("./utils/storage");
+const populateSortedComments = require("./config/populateSortedComments");
+const { setSortedComments } = require("./controllers/comment");
 
 const app = express();
 
@@ -18,7 +20,10 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 
-connectDB();
+connectDB().then(async () => {
+  const sortedComments = await populateSortedComments();
+  setSortedComments(sortedComments);
+});
 
 app.use(
   cors({

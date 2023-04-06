@@ -3,12 +3,15 @@ const { body } = require("express-validator");
 
 const commentController = require("../controllers/comment");
 
+const { checkSortedComments } = require("../middleware");
+
 const router = express.Router();
 
-router.get("/", commentController.getComments);
+router.get("/", checkSortedComments, commentController.getComments);
 
 router.post(
   "/add-comment",
+  checkSortedComments,
   [
     body("userName").trim().not().isEmpty(),
     body("email")
@@ -22,6 +25,7 @@ router.post(
 
 router.post(
   "/add-comment/:parentId",
+  checkSortedComments,
   [
     body("userName").trim().not().isEmpty(),
     body("email")
