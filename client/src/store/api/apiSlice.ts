@@ -3,9 +3,6 @@ import * as io from "socket.io-client";
 import { CommentsResponse } from "../../models/response/CommentResponse";
 import { SortParams } from "../../types/sort";
 import { commentSliceActions } from "../comments/comment-slice";
-interface GetCommentsResponse extends CommentsResponse {
-  action: string;
-}
 
 interface Params {
   sortParams: SortParams;
@@ -17,55 +14,30 @@ export const apiSlice = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: "/api/comments" }),
   tagTypes: ["Comment"],
   endpoints: (builder) => ({
-    getComments: builder.query({
-      query: (params: Params | null) => ({
-        url:
-          `${process.env.REACT_APP_API_BASE_URL}/api/comments` +
-          `${
-            params
-              ? `?page=${params?.page.toString()}&sortBy=${
-                  params?.sortParams.sortBy
-                }&sortOrder=${params?.sortParams.sortOrder}`
-              : ""
-          }`,
-        method: "GET",
-      }),
-      providesTags: ["Comment"],
-      async onCacheEntryAdded(
-        arg,
-        { updateCachedData, cacheDataLoaded, cacheEntryRemoved }
-      ) {
-        const socket = io.connect(`${process.env.REACT_APP_API_BASE_URL}`, {
-          withCredentials: true,
-        });
-        try {
-          await cacheDataLoaded;
-
-          const listener = (data: GetCommentsResponse) => {
-            if (data.action !== "getComments") return;
-
-            const { action, ...rest } = data;
-            updateCachedData((draft) => {
-              Object.assign(draft, rest);
-            });
-          };
-
-          socket.on("comments", listener);
-        } catch (error) {
-          await cacheEntryRemoved;
-
-          socket.close();
-        }
+    getComments: builder.query<CommentsResponse, Params>({
+      query: (params) => {
+        console.log("Update Get comments");
+        return {
+          url: `${process.env.REACT_APP_API_BASE_URL}/api/comments`,
+          method: "GET",
+          params: {
+            page: params?.page,
+            sortBy: params?.sortParams.sortBy,
+            sortOrder: params?.sortParams.sortOrder,
+          },
+        };
       },
+      providesTags: ["Comment"],
     }),
     addNewComment: builder.mutation({
-      query: (data) => ({
-        url: `${process.env.REACT_APP_API_BASE_URL}/api/comments/add-comment${
-          data.parentId ? "/" + data.parentId : ""
-        }`,
-        method: "POST",
-        body: data.formData,
-      }),
+      query: ({ commentData, params }) => {
+        return {
+          url: `${process.env.REACT_APP_API_BASE_URL}/api/comments/add-comment`,
+          method: "POST",
+          body: commentData,
+          params: params,
+        };
+      },
       invalidatesTags: ["Comment"],
       onCacheEntryAdded(arg, api) {
         api.dispatch(commentSliceActions.removePreviewComment());

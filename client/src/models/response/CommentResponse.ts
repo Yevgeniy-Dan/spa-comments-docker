@@ -7,6 +7,5 @@ export interface CommentResponse {
 
 export interface CommentsResponse {
   comments: CommentType[];
-  replies: CommentType[];
   totalItems: number;
 }

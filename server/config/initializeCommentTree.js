@@ -2,7 +2,7 @@ const Comment = require("../models/comment");
 const ReplyTo = require("../models/replyTo");
 const commentTree = require("../utils/comment-tree/comment-tree");
 
-const populateSortedComments = async () => {
+const initializeCommentTree = async () => {
   const [comments, replies] = await Promise.all([
     Comment.findAll(),
     ReplyTo.findAll(),
@@ -24,9 +24,7 @@ const populateSortedComments = async () => {
     commentTree.addEdge(r.commentId, r.replyId);
   }
 
-  const sortedComments = commentTree.sort("date", "desc");
-
-  return sortedComments;
+  return true;
 };
 
-module.exports = populateSortedComments;
+module.exports = initializeCommentTree;

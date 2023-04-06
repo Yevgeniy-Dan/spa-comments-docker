@@ -5,7 +5,7 @@ import BootstrapTable from "react-bootstrap-table-next";
 import { useAppDispatch, useAppSelector } from "../../../hooks/redux";
 import { commentSliceActions } from "../../../store/comments/comment-slice";
 import { SortBy, SortOrder } from "../../../types/comment";
-import { useGetCommentsQuery } from "../../../store/api/apiSlice";
+import apiSlice, { useGetCommentsQuery } from "../../../store/api/apiSlice";
 import AppSpinner from "../AppSpinner";
 import Paginator from "../Paginator";
 
@@ -13,6 +13,7 @@ import constants from "../../../constants";
 import "./Comments.css";
 import { SortParams } from "../../../types/sort";
 import RenderComments from "./RenderComments";
+import * as io from "socket.io-client";
 
 const Comments: React.FC = () => {
   const [sortParams, setSortParams] = useState<SortParams>({
@@ -20,6 +21,27 @@ const Comments: React.FC = () => {
     sortOrder: "desc",
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    const socket = io.connect(`${process.env.REACT_APP_API_BASE_URL}`, {
+      withCredentials: true,
+    });
+
+    const listener = (data: any) => {
+      if (data.action !== "addComment") return;
+
+      // Invalidate the cache for the `getComments` endpoint
+      dispatch(apiSlice.util.invalidateTags(["Comment"]));
+    };
+
+    socket.on("comments", listener);
+
+    return () => {
+      socket.off("comments", listener);
+      socket.disconnect();
+    };
+  }, [dispatch]);
 
   const {
     data: comments,
@@ -40,15 +62,13 @@ const Comments: React.FC = () => {
 
   const firstCommentRef = useRef<any>(null);
 
-  const dispatch = useAppDispatch();
-
   const { previewComment, firstCommentY } = useAppSelector(
     (state) => state.comments
   );
 
-  useEffect(() => {
-    if (currentPage > 1 && previewComment) setCurrentPage(1);
-  }, [previewComment, currentPage]);
+  // useEffect(() => {
+  //   if (currentPage > 1 && previewComment) setCurrentPage(1);
+  // }, [previewComment, currentPage]);
 
   useLayoutEffect(() => {
     const interval = setInterval(() => {
@@ -115,11 +135,13 @@ const Comments: React.FC = () => {
   const loadPosts = (direction: "previous" | "next") => {
     let page = currentPage;
     if (direction === "next") {
+      //request to database
       page++;
       dispatch(commentSliceActions.removePreviewComment());
       setCurrentPage(page);
     }
     if (direction === "previous") {
+      //request to database
       page--;
       dispatch(commentSliceActions.removePreviewComment());
       setCurrentPage(page);

@@ -11,19 +11,13 @@ const bodyParser = require("body-parser");
 
 const commentRoutes = require("./routes/comment");
 const { upload, postFile } = require("./utils/storage");
-const populateSortedComments = require("./config/populateSortedComments");
-const { setSortedComments } = require("./controllers/comment");
+const initializeCommentTree = require("./config/initializeCommentTree");
 
 const app = express();
 
 if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
-
-connectDB().then(async () => {
-  const sortedComments = await populateSortedComments();
-  setSortedComments(sortedComments);
-});
 
 app.use(
   cors({
@@ -53,10 +47,18 @@ if (process.env.NODE_ENV === "production") {
 app.use(errorController.get404);
 app.use(errorHandler);
 
-const server = app.listen(
-  process.env.NODE_DOCKER_PORT || process.env.PORT || 8080
-);
-const io = require("./socket").init(server);
-io.on("connection", (socket) => {
-  console.log("User connected ");
+connectDB().then(async () => {
+  try {
+    await initializeCommentTree();
+
+    const server = app.listen(
+      process.env.NODE_DOCKER_PORT || process.env.PORT || 8080
+    );
+    const io = require("./socket").init(server);
+    io.on("connection", (socket) => {
+      console.log("User connected ");
+    });
+  } catch (error) {
+    throw new Error("From app.js: ", error);
+  }
 });

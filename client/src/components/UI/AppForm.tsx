@@ -163,9 +163,14 @@ const AppForm = () => {
         try {
           const parentId = newComment.parentId || null;
 
-          await addNewComment({
+          const params = {
+            sortBy: "date",
+            sortOrder: "desc",
             parentId: parentId,
-            formData: formData,
+          };
+          await addNewComment({
+            params: params,
+            commentData: formData,
           }).unwrap();
           formRef.current!.classList.remove("was-validated");
           resetValues();

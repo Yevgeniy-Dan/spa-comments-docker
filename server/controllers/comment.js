@@ -1,5 +1,4 @@
 const axios = require("axios");
-const FormData = require("form-data");
 const asyncHandler = require("express-async-handler");
 const { validationResult } = require("express-validator");
 const { isCorrectHtmlTags } = require("../validators/html-tags");
@@ -10,98 +9,44 @@ const ReplyTo = require("../models/replyTo");
 const io = require("../socket");
 
 const commentTree = require("../utils/comment-tree/comment-tree");
-let sortedComments;
 const perPage = 25;
 
-// We create an object with properties. The setSortedComments function is used to set the app.locals.sortedComments value to the sortedComments variable
+// These functions are exported as modules, so we can import
+// them into a file where we define our routes.
 
-// These functions are exported as modules, so we can import them into a file where we define our routes.
+function getPageForAddedComment(addedComment, sortBy, sortOrder) {
+  const updatedSortedComments = commentTree.sort(sortBy, sortOrder);
+
+  const addedCommentIndex = updatedSortedComments.findIndex(
+    (c) => c.id === addedComment.id
+  );
+
+  const page = Math.ceil(addedCommentIndex / perPage);
+
+  return { page, total: updatedSortedComments.length };
+}
 
 module.exports = {
-  // This function needs to be called once when starting the server (see app.js)
-  setSortedComments: (initialSortedComments) => {
-    sortedComments = initialSortedComments;
-  },
-
   getComments: asyncHandler(async (req, res) => {
-    const currentPage = req.query.page || 1;
+    const page = req.query.page || 1;
     const sortOrder = req.query.sortOrder || "desc";
     const sortBy = req.query.sortBy || "date";
 
-    sortedComments = commentTree.sort(sortBy, sortOrder);
+    const updatedSortedComments = commentTree.sort(sortBy, sortOrder);
 
-    const skippedComments = (currentPage - 1) * perPage;
-    const paginatedComments = sortedComments.slice(skippedComments, perPage);
-
-    const total = sortedComments.length;
-
-    io.getIO().emit("comments", {
-      action: "getComments",
-      comments: paginatedComments,
-      totalItems: sortedComments.length,
-    });
-
-    res.status(200).json({
-      message: "Success",
-      comments: paginatedComments,
-      totalItems: total,
-    });
-  }),
-
-  addPreview: asyncHandler(async (req, res) => {
-    const previewComment = req.query.previewComment;
-    const sortBy = req.query.sortBy || "date";
-    const sortOrder = req.query.sortOrder || "desc";
-
-    if (!previewComment) {
-      return res.status(404).json({
-        message: "You are not passed the 'previewComment' within 'query'",
-      });
-    }
-
-    commentTree.addReplyIdObj(previewComment.parentId, previewComment.id);
-    commentTree.addComment(previewComment);
-    commentTree.addEdge(previewComment.parentId, previewComment.id);
-    const sortedComments = commentTree.sort(sortBy, sortOrder);
-
-    const previewIndex = sortedComments.findIndex(
-      (c) => c.id === previewComment.id
+    const skippedComments = (page - 1) * perPage;
+    const paginatedComments = updatedSortedComments.slice(
+      skippedComments,
+      perPage * page
     );
 
-    const currentPage = Math.ceil(previewIndex / perPage);
+    const total = updatedSortedComments.length;
 
-    const total = sortedComments.length;
-
-    const skippedItems = (currentPage - 1) * perPage;
-
-    const paginatedComments = sortedComments.slice(skippedItems, perPage);
-
-    res.status(200).json({
-      message: "Success",
-      comments: paginatedComments,
-      page: currentPage,
-      totalItems: total,
-    });
-  }),
-  removePreview: asyncHandler(async (req, res) => {
-    const previewId = req.query.id;
-    const currentPage = req.query.page || 1;
-
-    if (!previewId) {
-      return res.status(404).json({
-        message: "You didn't provide a 'preview comment' id",
-      });
-    }
-
-    sortedComments = sortedComments.filter((c) => c.id !== previewId);
-
-    // Also delete previewComment node from data structure
-    commentTree.removeComment(previewId);
-    const total = sortedComments.length;
-
-    const skippedItems = (currentPage - 1) * perPage;
-
-    const paginatedComments = sortedComments.slice(skippedItems, perPage);
+    // io.getIO().emit("comments", {
+    //   action: "getComments",
+    //   comments: paginatedComments,
+    //   totalItems: total,
+    // });
 
     res.status(200).json({
       message: "Success",
@@ -109,6 +54,77 @@ module.exports = {
       totalItems: total,
     });
   }),
+
+  // addPreview: asyncHandler(async (req, res) => {
+  //   const previewComment = req.query.previewComment;
+  //   const sortBy = req.query.sortBy || "date";
+  //   const sortOrder = req.query.sortOrder || "desc";
+
+  //   if (!previewComment) {
+  //     return res.status(404).json({
+  //       message: "You are not passed the 'previewComment' within 'query'",
+  //     });
+  //   }
+
+  //   commentTree.addReplyIdObj(previewComment.parentId, previewComment.id);
+  //   commentTree.addComment(previewComment);
+  //   commentTree.addEdge(previewComment.parentId, previewComment.id);
+  //   const updatedSortedComments = commentTree.sort(sortBy, sortOrder);
+
+  //   const previewIndex = updatedSortedComments.findIndex(
+  //     (c) => c.id === previewComment.id
+  //   );
+
+  //   const page = Math.ceil(previewIndex / perPage);
+
+  //   const total = updatedSortedComments.length;
+
+  //   const skippedItems = (page - 1) * perPage;
+
+  //   const paginatedComments = updatedSortedComments.slice(
+  //     skippedItems,
+  //     perPage
+  //   );
+
+  //   res.status(200).json({
+  //     message: "Success",
+  //     comments: paginatedComments,
+  //     page: page,
+  //     totalItems: total,
+  //   });
+  // }),
+  // removePreview: asyncHandler(async (req, res) => {
+  //   const previewId = req.query.id;
+  //   const page = req.query.page || 1;
+
+  //   if (!previewId) {
+  //     return res.status(404).json({
+  //       message: "You didn't provide a 'preview comment' id",
+  //     });
+  //   }
+
+  //   // const updatedSortedComments = sortedComments.filter(
+  //   //   (c) => c.id !== previewId
+  //   // );
+
+  //   // Also delete previewComment node from data structure
+  //   commentTree.removeComment(previewId);
+  //   const updatedSortedComments = commentTree.sort();
+  //   const total = updatedSortedComments.length;
+
+  //   const skippedItems = (page - 1) * perPage;
+
+  //   const paginatedComments = updatedSortedComments.slice(
+  //     skippedItems,
+  //     perPage
+  //   );
+
+  //   res.status(200).json({
+  //     message: "Success",
+  //     comments: paginatedComments,
+  //     totalItems: total,
+  //   });
+  // }),
   postComment: asyncHandler(async (req, res) => {
     const errors = validationResult(req);
 
@@ -128,9 +144,11 @@ module.exports = {
       throw error;
     }
 
-    const parentId = req.params.parentId;
     const { userName, email, homePage, uploadUrl, text, captchaToken } =
       req.body;
+    const { sortBy, sortOrder } = req.query;
+
+    let parentId = req.query.parentId;
 
     // Captcha verify
 
@@ -161,7 +179,8 @@ module.exports = {
 
     let newComment;
 
-    if (parentId) {
+    if (parseInt(parentId)) {
+      parentId = parseInt(parentId);
       const parentUser = await Comment.findByPk(parentId);
 
       if (!parentUser) {
@@ -174,36 +193,36 @@ module.exports = {
 
       newComment = await comment.save();
 
-      commentTree.addReplyIdObj(parentId, newComment.id);
-      commentTree.addComment(newComment);
-      commentTree.addEdge(parentId, newComment.id);
+      commentTree.addReplyIdObj(parentId, newComment.dataValues.id);
+      commentTree.addComment(newComment.dataValues);
+      commentTree.addEdge(parentId, newComment.dataValues.id);
 
       await ReplyTo.create({
         replyId: newComment.id,
         commentId: parentId,
       });
-
-      const { updatedAt, commentId, ...rest } = newComment.dataValues;
-
-      return res.status(201).json({
-        message: "Reply comment created successfully!",
-        reply: {
-          replyId: newComment.id,
-          commentId: parentUser.id,
-          replyToUsername: parentUser.userName,
-          ...rest,
-        },
-      });
     } else {
       newComment = await comment.save();
-      commentTree.addComment(newComment);
+
+      commentTree.addComment(newComment.dataValues);
     }
+
+    // const { page, total } = getPageForAddedComment(
+    //   newComment.dataValues,
+    //   sortBy,
+    //   sortOrder
+    // );
+
+    io.getIO().emit("comments", {
+      action: "addComment",
+      // page: page,
+      comment: newComment.dataValues,
+      // totalItems: total,
+    });
 
     return res.status(201).json({
       message: "Comment created successfully!",
-      comment: newComment,
+      comment: newComment.dataValues,
     });
   }),
 };
-
-module.exports.sortedComments = sortedComments;
