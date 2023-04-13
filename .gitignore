@@ -5,5 +5,4 @@ server/.env
 server/.gitignore
 client/.gitignore
 client/.env
-package-lock.json
-package.json
+Procfile
