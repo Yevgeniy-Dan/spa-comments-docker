@@ -1,41 +1,60 @@
 import React from "react";
+import { Pagination } from "react-bootstrap";
 
 const Paginator: React.FC<
   React.PropsWithChildren<{
     currentPage: number;
     lastPage: number;
-    onPrevious: () => void;
-    onNext: () => void;
+    onPageChange: (page: number) => void;
   }>
-> = ({ currentPage, onPrevious, lastPage, onNext }) => {
+> = ({ currentPage, lastPage, onPageChange }) => {
+  const pages = [];
+
+  let startPage = Math.max(1, currentPage - 2);
+  let endPage = Math.min(lastPage, currentPage + 2);
+
+  if (lastPage <= 5) {
+    startPage = 1;
+    endPage = lastPage;
+  } else if (currentPage <= 3) {
+    startPage = 1;
+    endPage = 5;
+  } else if (currentPage >= lastPage - 2) {
+    startPage = lastPage - 4;
+    endPage = lastPage;
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(
+      <Pagination.Item
+        key={i}
+        active={i === currentPage}
+        onClick={() => {
+          onPageChange(i);
+        }}
+      >
+        {i}
+      </Pagination.Item>
+    );
+  }
+
   return (
     <div className="my-4">
-      <ul className="pagination justify-content-center">
-        <li className={`page-item  ${currentPage <= 1 && "disabled"}`}>
-          <div
-            className="page-link"
-            aria-disabled="true"
-            style={{ cursor: "pointer" }}
-            onClick={onPrevious}
-          >
-            Previous
-          </div>
-        </li>
-        <li className="page-item">
-          <div className="page-link" style={{ cursor: "pointer" }}>
-            {currentPage}
-          </div>
-        </li>
-        <li className={`page-item  ${currentPage >= lastPage && "disabled"}`}>
-          <div
-            className="page-link"
-            style={{ cursor: "pointer" }}
-            onClick={onNext}
-          >
-            Next
-          </div>
-        </li>
-      </ul>
+      <Pagination className="justify-content-center">
+        <Pagination.Prev
+          disabled={currentPage <= 1}
+          onClick={() => {
+            onPageChange(currentPage - 1);
+          }}
+        />
+        {pages}
+        <Pagination.Next
+          disabled={currentPage >= lastPage}
+          onClick={() => {
+            onPageChange(currentPage + 1);
+          }}
+        />
+      </Pagination>
     </div>
   );
 };

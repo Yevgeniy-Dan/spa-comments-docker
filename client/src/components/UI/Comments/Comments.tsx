@@ -187,18 +187,6 @@ const Comments: React.FC = () => {
     },
   ];
 
-  const loadPosts = (direction: "previous" | "next") => {
-    let page = currentPage;
-    if (direction === "next") {
-      page++;
-      setCurrentPage(page);
-    }
-    if (direction === "previous") {
-      page--;
-      setCurrentPage(page);
-    }
-  };
-
   useEffect(() => {
     if (isError) console.log(message);
   }, [isError, message]);
@@ -231,13 +219,9 @@ const Comments: React.FC = () => {
                 Math.ceil(comments.totalItems / constants.perPage),
                 1
               )}
-              onNext={() => {
+              onPageChange={(page) => {
                 window.scrollTo(0, firstCommentY);
-                loadPosts("next");
-              }}
-              onPrevious={() => {
-                window.scrollTo(0, firstCommentY);
-                loadPosts("previous");
+                setCurrentPage(page);
               }}
             />
           </>
