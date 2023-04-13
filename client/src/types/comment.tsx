@@ -11,6 +11,18 @@ export type Comment = {
   isPreview: boolean | null;
   replyToUsername: string;
   isOpenAttachments: boolean;
+  token?: string;
+};
+
+export type AddComment = {
+  userName: string;
+  email: string;
+  text: string;
+  captchaToken: string;
+  homepage?: string | null;
+  upload?: File | null;
+  parentId?: number | null;
+  isPreview?: boolean;
 };
 
 export type SortBy = "date" | "email" | "username";

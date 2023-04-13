@@ -19,5 +19,7 @@ router.post(
   ],
   commentController.postComment
 );
+router.post("/add-preview-comment", commentController.addPreviewComment);
+router.post("/delete-preview-comment", commentController.deletePreview);
 
 module.exports = router;

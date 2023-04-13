@@ -1,20 +1,29 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-import { Comment as CommentType } from "../../types/comment";
-
 type postParent = {
   parentId: number;
   userName: string;
 } | null;
 
+export type readyToSend = "pending" | "ready" | "inactive";
+
+interface PreviewUploadFile {
+  type: string;
+  url: string;
+  name: string;
+}
 type InitialState = {
-  previewComment: CommentType | null;
+  previewCommentId: string | null;
+  previewUploadFile: PreviewUploadFile | null;
   postParent: postParent;
   firstCommentY: any;
+  readyToSend: readyToSend;
 };
 
 const initialState: InitialState = {
-  previewComment: null,
+  readyToSend: "inactive",
+  previewCommentId: null,
+  previewUploadFile: null,
   postParent: null,
   firstCommentY: null,
 };
@@ -27,20 +36,27 @@ const commentSlice = createSlice({
     addRefToFirstComment: (state, action: PayloadAction<number>) => {
       state.firstCommentY = action.payload;
     },
-    addPreviewComment: (
-      state,
-      action: PayloadAction<CommentType | CommentType>
-    ) => {
-      state.previewComment = action.payload;
+    toggleReadyToSend: (state, action: PayloadAction<readyToSend>) => {
+      state.readyToSend = action.payload;
+    },
+    setPreviewFileUrl: (state, action: PayloadAction<PreviewUploadFile>) => {
+      state.previewUploadFile = action.payload;
+    },
+    setPreviewCommentId: (state, action: PayloadAction<string | null>) => {
+      state.previewCommentId = action.payload;
     },
     removePreviewComment: (state) => {
-      state.previewComment = null;
+      if (state.previewUploadFile?.url) {
+        URL.revokeObjectURL(state.previewUploadFile.url);
+      }
+      state.previewCommentId = null;
+      state.previewUploadFile = null;
     },
     setPostParentId: (state, action: PayloadAction<postParent | null>) => {
-      state.previewComment = null;
       if (action.payload) {
         state.postParent = {
-          ...action.payload,
+          parentId: action.payload.parentId,
+          userName: action.payload.userName,
         };
       } else {
         state.postParent = null;

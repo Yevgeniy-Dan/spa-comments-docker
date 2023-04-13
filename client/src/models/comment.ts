@@ -3,10 +3,11 @@ class Comment {
   email: string;
   text: string;
   captchaToken: string;
-  homepage?: string | null;
+  homePage?: string | null;
   upload?: File | null;
   parentId?: number | null;
-  isPreview?: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
 
   constructor(
     userName: string,
@@ -16,16 +17,18 @@ class Comment {
     homepage: string | null,
     upload: File | null,
     parentId: number | null,
-    isPreview?: boolean
+    createdAt: string | null,
+    updatedAt: string | null
   ) {
     this.userName = userName;
     this.email = email;
     this.text = text;
     this.captchaToken = captchaToken;
-    this.homepage = homepage;
+    this.homePage = homepage;
     this.upload = upload;
     this.parentId = parentId;
-    this.isPreview = isPreview || false;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
   }
 }
 

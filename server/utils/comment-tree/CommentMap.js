@@ -66,6 +66,17 @@ class CommentMap extends Map {
       callback.call(thisArgs, value, key);
     });
   }
+
+  static deepCopy(comments) {
+    const newMap = new CommentMap();
+    for (let [key, value] of comments) {
+      const newKey = JSON.parse(JSON.stringify(key));
+      const newValue = new Set([...value]);
+      newMap.set(newKey, newValue);
+    }
+
+    return newMap;
+  }
 }
 
 module.exports = CommentMap;

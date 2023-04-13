@@ -1,9 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Comment as CommentType } from "../../../types/comment";
 import CommentItem from "./CommentItem";
 import Attachments from "./Attachments";
-import { useAppSelector } from "../../../hooks/redux";
-import insertPreviewComment from "../../../utils/commentUtils";
 
 const RenderComment: React.FC<{
   comment: CommentType;
@@ -11,7 +9,14 @@ const RenderComment: React.FC<{
   comments: CommentType[];
   depth: number;
 }> = ({ index, comment, comments, depth }) => {
-  const children = comments.filter((n) => n.parentId === comment.id);
+  const children = comments
+    .filter((n) => n.parentId === comment.id)
+    .map((n) => {
+      return {
+        ...n,
+        replyToUsername: comment.userName,
+      };
+    });
   const marginLeft = depth * 20;
 
   const [toggleImage, setToggleImage] = useState<boolean>(false);
@@ -27,15 +32,18 @@ const RenderComment: React.FC<{
     setIsOpenAttachments(!isOpenAttachments);
   };
 
-  // Assigning a code to an attachment will ensure that the useState hooks for toggleImage and isOpenAttachments are always called in the same order on every render, regardless of the comment being rendered, i.e. they are at the top of the RenderComment function, before any conditional logic
-  const attachments = comment.uploadUrl ? (
+  // Assigning a code to an attachment will ensure that the useState hooks
+  // for toggleImage and isOpenAttachments are always called in the same order
+  // on every render, regardless of the comment being rendered, i.e. they are at
+  // the top of the RenderComment function, before any conditional logic
+  const attachments = (
     <Attachments
       comment={comment}
       isOpen={isOpenAttachments}
       onToggleImage={() => setToggleImage(!toggleImage)}
       toggleImage={toggleImage}
     />
-  ) : null;
+  );
 
   return (
     <div key={index} style={{ marginLeft }}>
@@ -59,34 +67,19 @@ const RenderComment: React.FC<{
   );
 };
 
-const mergeComments = (
-  comments: CommentType[],
-  previewComment: CommentType | null
-) => {
-  return previewComment
-    ? insertPreviewComment(comments, previewComment)
-    : comments;
-};
-
 const RenderComments: React.FC<
   React.PropsWithChildren<{
     comments: CommentType[];
   }>
 > = ({ comments }) => {
-  const { previewComment } = useAppSelector((state) => state.comments);
-
-  const mergedComments = useMemo(() => {
-    return mergeComments(comments, previewComment);
-  }, [comments, previewComment]);
-
   return (
     <div>
-      {mergedComments
+      {comments
         .filter((c) => !c.parentId)
         .map((node, index) => (
           <RenderComment
             comment={node}
-            comments={mergedComments}
+            comments={comments}
             depth={0}
             index={index}
           />

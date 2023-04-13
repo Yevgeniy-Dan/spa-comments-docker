@@ -73,8 +73,8 @@ const _CommentTree = (() => {
       this.comments.getById(parentId).add(childObj);
     }
 
-    sort(sortBy, sortOrder) {
-      const comments = CommentTree.sortComments(this.comments);
+    sort(sortBy, sortOrder, previewComment) {
+      const comments = CommentTree.sortComments(this.comments, previewComment);
 
       // Create a map of each object's dependecies
       const dependencies = new Map();
@@ -92,7 +92,7 @@ const _CommentTree = (() => {
         }
       }
 
-      let parentComments = comments.filter((c) => c.parentId === null);
+      let parentComments = comments.filter((c) => !c.parentId);
 
       switch (sortBy) {
         case "date": {
@@ -140,13 +140,22 @@ const _CommentTree = (() => {
     result.push(node);
   };
 
-  CommentTree.sortComments = (comments) => {
+  CommentTree.sortComments = (comments, previewComment = null) => {
     const visited = {};
     const result = [];
 
-    for (const comment of comments.keys()) {
+    const commentsCopy = CommentMap.deepCopy(comments);
+
+    if (previewComment) {
+      commentsCopy.set(previewComment, new Set());
+      if (previewComment.parentId) {
+        commentsCopy.getById(previewComment.parentId).add(previewComment);
+      }
+    }
+
+    for (const comment of commentsCopy.keys()) {
       if (!visited[comment.id]) {
-        CommentTree.dfs(comment, comments, visited, result);
+        CommentTree.dfs(comment, commentsCopy, visited, result);
       }
     }
 

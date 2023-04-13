@@ -9,44 +9,70 @@ const ReplyTo = require("../models/replyTo");
 const io = require("../socket");
 
 const commentTree = require("../utils/comment-tree/comment-tree");
-const perPage = 25;
+const PER_PAGE = 25;
+
+const userPreviews = {};
 
 // These functions are exported as modules, so we can import
 // them into a file where we define our routes.
 
-function getPageForAddedComment(addedComment, sortBy, sortOrder) {
-  const updatedSortedComments = commentTree.sort(sortBy, sortOrder);
+const getCommentsWithPreview = (query) => {
+  const sortOrder = query.sortOrder || "desc";
+  const sortBy = query.sortBy || "date";
+  const previewId = query.previewId || null;
 
-  const addedCommentIndex = updatedSortedComments.findIndex(
-    (c) => c.id === addedComment.id
-  );
+  let updatedSortedComments;
+  let page;
 
-  const page = Math.ceil(addedCommentIndex / perPage);
+  if (previewId && previewId in userPreviews) {
+    updatedSortedComments = commentTree.sort(
+      sortBy,
+      sortOrder,
+      userPreviews[previewId].comment
+    );
 
-  return { page, total: updatedSortedComments.length };
-}
+    const previewIndex = updatedSortedComments.findIndex(
+      (c) => c.id === previewId
+    );
+
+    if (userPreviews[previewId].isNew) {
+      page = Math.max(Math.ceil(previewIndex / PER_PAGE), 1);
+    }
+
+    userPreviews[previewId] = { ...userPreviews[previewId], isNew: false };
+  } else {
+    updatedSortedComments = commentTree.sort(sortBy, sortOrder);
+  }
+
+  return { updatedSortedComments, page };
+};
 
 module.exports = {
   getComments: asyncHandler(async (req, res) => {
-    const page = req.query.page || 1;
-    const sortOrder = req.query.sortOrder || "desc";
-    const sortBy = req.query.sortBy || "date";
+    const previewId = req.query.previewId || null;
 
-    const updatedSortedComments = commentTree.sort(sortBy, sortOrder);
+    let page = req.query.page || 1;
 
-    const skippedComments = (page - 1) * perPage;
+    let { updatedSortedComments, page: updatedPage } = getCommentsWithPreview(
+      req.query
+    );
+
+    if (updatedPage) page = updatedPage;
+
+    const skippedComments = (page - 1) * PER_PAGE;
     const paginatedComments = updatedSortedComments.slice(
       skippedComments,
-      perPage * page
+      PER_PAGE * page
     );
 
     const total = updatedSortedComments.length;
 
-    // io.getIO().emit("comments", {
-    //   action: "getComments",
-    //   comments: paginatedComments,
-    //   totalItems: total,
-    // });
+    if (previewId && userPreviews[previewId]?.isNew) {
+      io.getIO().emit("comments", {
+        action: "getComments",
+        page: page,
+      });
+    }
 
     res.status(200).json({
       message: "Success",
@@ -55,76 +81,61 @@ module.exports = {
     });
   }),
 
-  // addPreview: asyncHandler(async (req, res) => {
-  //   const previewComment = req.query.previewComment;
-  //   const sortBy = req.query.sortBy || "date";
-  //   const sortOrder = req.query.sortOrder || "desc";
+  addPreviewComment: asyncHandler(async (req, res) => {
+    const previewComment = req.body;
 
-  //   if (!previewComment) {
-  //     return res.status(404).json({
-  //       message: "You are not passed the 'previewComment' within 'query'",
-  //     });
-  //   }
+    if (!previewComment) {
+      return res.status(404).json({
+        message: "You are not passed the 'previewComment' within 'query'",
+      });
+    }
 
-  //   commentTree.addReplyIdObj(previewComment.parentId, previewComment.id);
-  //   commentTree.addComment(previewComment);
-  //   commentTree.addEdge(previewComment.parentId, previewComment.id);
-  //   const updatedSortedComments = commentTree.sort(sortBy, sortOrder);
+    userPreviews[previewComment.id] = {
+      comment: {
+        ...previewComment,
+        parentId: parseInt(previewComment.parentId, 10) || null,
+        isPreview: true,
+      },
+      isNew: !userPreviews[previewComment.id],
+    };
 
-  //   const previewIndex = updatedSortedComments.findIndex(
-  //     (c) => c.id === previewComment.id
-  //   );
+    io.getIO().emit("comments", {
+      action: "addPreview",
+      previewId: previewComment.id,
+    });
 
-  //   const page = Math.ceil(previewIndex / perPage);
+    return res.status(200).json({
+      message: "Success",
+      previewId: previewComment.id,
+    });
+  }),
+  deletePreview: asyncHandler(async (req, res) => {
+    const previewId = req.query.previewId;
 
-  //   const total = updatedSortedComments.length;
+    if (!previewId) {
+      io.getIO().emit("comments", {
+        action: "deletePreviewComment",
+        outdatedPreviewId: null,
+      });
 
-  //   const skippedItems = (page - 1) * perPage;
+      return res.status(200).json({
+        message: "Success. The previewId parameter turned out to be null.",
+      });
+    }
 
-  //   const paginatedComments = updatedSortedComments.slice(
-  //     skippedItems,
-  //     perPage
-  //   );
+    if (previewId in userPreviews) {
+      delete userPreviews[previewId];
+    }
 
-  //   res.status(200).json({
-  //     message: "Success",
-  //     comments: paginatedComments,
-  //     page: page,
-  //     totalItems: total,
-  //   });
-  // }),
-  // removePreview: asyncHandler(async (req, res) => {
-  //   const previewId = req.query.id;
-  //   const page = req.query.page || 1;
+    io.getIO().emit("comments", {
+      action: "deletePreviewComment",
+      outdatedPreviewId: previewId,
+    });
 
-  //   if (!previewId) {
-  //     return res.status(404).json({
-  //       message: "You didn't provide a 'preview comment' id",
-  //     });
-  //   }
-
-  //   // const updatedSortedComments = sortedComments.filter(
-  //   //   (c) => c.id !== previewId
-  //   // );
-
-  //   // Also delete previewComment node from data structure
-  //   commentTree.removeComment(previewId);
-  //   const updatedSortedComments = commentTree.sort();
-  //   const total = updatedSortedComments.length;
-
-  //   const skippedItems = (page - 1) * perPage;
-
-  //   const paginatedComments = updatedSortedComments.slice(
-  //     skippedItems,
-  //     perPage
-  //   );
-
-  //   res.status(200).json({
-  //     message: "Success",
-  //     comments: paginatedComments,
-  //     totalItems: total,
-  //   });
-  // }),
+    res.status(200).json({
+      message: "Preview comment successfully deleted.",
+    });
+  }),
   postComment: asyncHandler(async (req, res) => {
     const errors = validationResult(req);
 
@@ -146,8 +157,6 @@ module.exports = {
 
     const { userName, email, homePage, uploadUrl, text, captchaToken } =
       req.body;
-    const { sortBy, sortOrder } = req.query;
-
     let parentId = req.query.parentId;
 
     // Captcha verify
@@ -207,17 +216,9 @@ module.exports = {
       commentTree.addComment(newComment.dataValues);
     }
 
-    // const { page, total } = getPageForAddedComment(
-    //   newComment.dataValues,
-    //   sortBy,
-    //   sortOrder
-    // );
-
     io.getIO().emit("comments", {
       action: "addComment",
-      // page: page,
       comment: newComment.dataValues,
-      // totalItems: total,
     });
 
     return res.status(201).json({

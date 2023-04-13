@@ -1,22 +1,22 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import * as io from "socket.io-client";
 import { CommentsResponse } from "../../models/response/CommentResponse";
 import { SortParams } from "../../types/sort";
-import { commentSliceActions } from "../comments/comment-slice";
 
 interface Params {
   sortParams: SortParams;
-  page: number;
+  page?: number;
+  previewId?: number | null;
 }
 
 export const apiSlice = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({ baseUrl: "/api/comments" }),
+  baseQuery: fetchBaseQuery({
+    baseUrl: "/api/comments",
+  }),
   tagTypes: ["Comment"],
   endpoints: (builder) => ({
     getComments: builder.query<CommentsResponse, Params>({
       query: (params) => {
-        console.log("Update Get comments");
         return {
           url: `${process.env.REACT_APP_API_BASE_URL}/api/comments`,
           method: "GET",
@@ -24,6 +24,7 @@ export const apiSlice = createApi({
             page: params?.page,
             sortBy: params?.sortParams.sortBy,
             sortOrder: params?.sortParams.sortOrder,
+            previewId: params?.previewId,
           },
         };
       },
@@ -38,10 +39,31 @@ export const apiSlice = createApi({
           params: params,
         };
       },
-      invalidatesTags: ["Comment"],
-      onCacheEntryAdded(arg, api) {
-        api.dispatch(commentSliceActions.removePreviewComment());
+      // invalidatesTags: ["Comment"],
+      // onCacheEntryAdded(arg, api) {
+      //   api.dispatch(commentSliceActions.removePreviewComment());
+      // },
+    }),
+    addPreviewComment: builder.mutation({
+      query: ({ comment, previewId }) => {
+        comment.append("id", previewId);
+        return {
+          url: `${process.env.REACT_APP_API_BASE_URL}/api/comments/add-preview-comment`,
+          method: "POST",
+          body: comment,
+        };
       },
+      // invalidatesTags: ["Comment"],
+    }),
+    deletePreviewComment: builder.mutation({
+      query: (previewId) => {
+        return {
+          url: `${process.env.REACT_APP_API_BASE_URL}/api/comments/delete-preview-comment`,
+          method: "POST",
+          params: { previewId: previewId },
+        };
+      },
+      // invalidatesTags: ["Comment"],
     }),
   }),
 });

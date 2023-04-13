@@ -21,7 +21,12 @@ const fileStorage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname);
-  if (ext !== ".png" && ext !== ".jpg" && ext !== ".gif" && ext !== ".txt") {
+  if (
+    ext.toLowerCase() !== ".png" &&
+    ext.toLowerCase() !== ".jpg" &&
+    ext.toLowerCase() !== ".gif" &&
+    ext.toLowerCase() !== ".txt"
+  ) {
     req.fileValidationError = true;
     return cb(null, false);
   }
@@ -89,6 +94,7 @@ exports.postFile = asyncHandler(async (req, res, next) => {
 const uploadToAWSS3 = (upload, req, res, next) => {
   s3.upload(upload, (err, uploadRes) => {
     if (err) {
+      console.log(err);
       return res.status(422).json({
         message: "There was an error uploading a file",
         error: err,

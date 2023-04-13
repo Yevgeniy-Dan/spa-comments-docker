@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, ChangeEvent } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  ChangeEvent,
+} from "react";
 import { Col, FloatingLabel, Form, Row } from "react-bootstrap";
 import ReCAPTCHA from "react-google-recaptcha";
 
@@ -7,19 +13,21 @@ import TagButtonPanel from "./TagButtonPanel";
 import { useAppDispatch, useAppSelector } from "../../hooks/redux";
 import { Comment as CommentType } from "../../types/comment";
 import AppSpinner from "./AppSpinner";
-import { useAddNewCommentMutation } from "../../store/api/apiSlice";
+import apiSlice, { useAddNewCommentMutation } from "../../store/api/apiSlice";
 import { commentSliceActions } from "../../store/comments/comment-slice";
 import { getMessage } from "../../utils/getMessage";
 import "./AppForm.css";
 import classNames from "classnames";
-import generateUniqueId from "../../utils/generateUniqueId";
+import { v4 as uuidv4 } from "uuid";
 
 const AppForm = () => {
   const dispatch = useAppDispatch();
 
   const postParent = useAppSelector((state) => state.comments.postParent);
 
-  const { firstCommentY } = useAppSelector((state) => state.comments);
+  const { readyToSend, previewCommentId, firstCommentY } = useAppSelector(
+    (state) => state.comments
+  );
   const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
 
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -103,33 +111,133 @@ const AppForm = () => {
         break;
     }
   };
-  const [addNewComment, { isLoading, isError, error }] =
-    useAddNewCommentMutation();
+  const [addNewComment, { isLoading }] = useAddNewCommentMutation();
+
+  const [error, setError] = useState<any>(null);
 
   const handlePreview = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setIsPreviewLoading(true);
-    let commentPreview: CommentType = {
-      id: generateUniqueId(),
-      isPreview: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      email: emailInputRef.current!.value,
-      homePage: homepageInputRef.current?.value || null,
-      text: textInputRef.current!.value,
-      uploadUrl: uploadFile,
-      userName: usernameInputRef.current!.value,
-      parentId: postParent?.parentId || null,
-      replyToUsername: postParent?.userName || "",
-      isOpenAttachments: false,
-    };
 
-    //show preview comment
-    dispatch(commentSliceActions.addPreviewComment(commentPreview));
-    window.scrollTo(0, scrollToPreview);
+    const commentPreview = buildPreviewComment();
+    const formData = formSendData(commentPreview);
+
+    let prevId = previewCommentId;
+    if (!previewCommentId) {
+      const uuid = uuidv4();
+      dispatch(commentSliceActions.setPreviewCommentId(uuid));
+      prevId = uuid;
+    }
+
+    if (uploadFile) {
+      const objectUrl = URL.createObjectURL(uploadFile);
+      dispatch(
+        commentSliceActions.setPreviewFileUrl({
+          type: uploadFile.type,
+          url: objectUrl,
+          name: uploadFile.name,
+        })
+      );
+    }
+
+    await dispatch(
+      apiSlice.endpoints.addPreviewComment.initiate({
+        comment: formData,
+        previewId: prevId,
+      })
+    );
+    // window.scrollTo(0, scrollToPreview);
     setIsPreviewLoading(false);
   };
+
+  // When we define close button on preview card to cancel preview
+  const clearPreviewComment = async () => {
+    await dispatch(
+      apiSlice.endpoints.deletePreviewComment.initiate(previewCommentId)
+    );
+  };
+
+  const buildComment = useCallback(() => {
+    const newComment = new Comment(
+      usernameInputRef.current!.value,
+      emailInputRef.current!.value,
+      textInputRef.current!.value,
+      token!,
+      homepageInputRef.current?.value || null,
+      uploadFile,
+      null,
+      null,
+      null
+    );
+    if (postParent?.parentId) {
+      newComment.parentId = postParent.parentId;
+    }
+
+    return newComment;
+  }, [postParent, token, uploadFile]);
+
+  const buildPreviewComment = useCallback(() => {
+    const commentPreview = new Comment(
+      usernameInputRef.current!.value,
+      emailInputRef.current!.value,
+      textInputRef.current!.value,
+      "",
+      homepageInputRef.current?.value || null,
+      null,
+      postParent?.parentId || null,
+      new Date().toISOString(),
+      new Date().toISOString()
+    );
+
+    return commentPreview;
+  }, [postParent]);
+
+  const formSendData = useCallback((newComment: any) => {
+    const formData = new FormData();
+
+    Object.entries(newComment).forEach(([key, value]) => {
+      if (!(value instanceof File) && value !== null) {
+        formData.append(key, value as string);
+      }
+      if (value instanceof File) {
+        formData.append(key, value);
+      }
+    });
+
+    return formData;
+  }, []);
+
+  useEffect(() => {
+    const sendData = async () => {
+      const newComment = buildComment();
+      const formData = formSendData(newComment);
+      const parentId = postParent?.parentId;
+
+      await dispatch(
+        apiSlice.endpoints.addNewComment.initiate({
+          params: { parentId: parentId },
+          commentData: formData,
+        })
+      )
+        .then((response: any) => {
+          if (response?.error) {
+            setError(response?.error);
+          } else {
+            dispatch(commentSliceActions.toggleReadyToSend("inactive"));
+            formRef.current!.classList.remove("was-validated");
+            resetValues();
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          setError(err?.error);
+        });
+    };
+    if (readyToSend === "ready") {
+      sendData();
+    }
+  }, [readyToSend, postParent, dispatch, formSendData, buildComment]);
 
   const submitHandler = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -138,42 +246,36 @@ const AppForm = () => {
       event.stopPropagation();
       setValidated(true);
     } else {
-      const newComment = new Comment(
-        usernameInputRef.current!.value,
-        emailInputRef.current!.value,
-        textInputRef.current!.value,
-        token,
-        homepageInputRef.current?.value || null,
-        uploadFile,
-        null
-      );
-      if (postParent?.parentId) {
-        newComment.parentId = postParent.parentId;
-      }
-
-      const formData = new FormData();
-      formData.append("userName", newComment.userName);
-      formData.append("email", newComment.email);
-      formData.append("text", newComment.text);
-      formData.append("captchaToken", newComment.captchaToken);
-      if (newComment.homepage) formData.append("homepage", newComment.homepage);
-      if (newComment.upload) formData.append("upload", newComment.upload);
-
       if (!isLoading) {
         try {
-          const parentId = newComment.parentId || null;
+          const parentId = postParent?.parentId;
 
-          const params = {
-            sortBy: "date",
-            sortOrder: "desc",
-            parentId: parentId,
-          };
-          await addNewComment({
-            params: params,
-            commentData: formData,
-          }).unwrap();
-          formRef.current!.classList.remove("was-validated");
-          resetValues();
+          if (!previewCommentId) {
+            const newComment = buildComment();
+            const formData = formSendData(newComment);
+
+            await dispatch(
+              apiSlice.endpoints.addNewComment.initiate({
+                params: { parentId: parentId },
+                commentData: formData,
+              })
+            )
+              .then((response: any) => {
+                if (response?.error) {
+                  setError(response?.error);
+                } else {
+                  formRef.current!.classList.remove("was-validated");
+                  resetValues();
+                }
+              })
+              .catch((err) => {
+                console.log(err);
+                setError(err?.error);
+              });
+          } else {
+            dispatch(commentSliceActions.toggleReadyToSend("pending"));
+            await clearPreviewComment();
+          }
         } catch (error) {
           console.error("Failed to save the post: ", error);
         }
@@ -197,12 +299,11 @@ const AppForm = () => {
   };
 
   const containerClassName = classNames("form-container", {
-    disabled: isLoading,
+    disabled: isLoading || isPreviewLoading,
   });
 
   return (
     <div className={`container ${containerClassName}`}>
-      {isPreviewLoading && <AppSpinner />}
       <div className="col-md-7 col-lg-8 mx-auto">
         <h4 className="mb-3 text-center">
           Your Comment
@@ -332,7 +433,7 @@ const AppForm = () => {
               )}
             </Form.Group>
           </Row>
-          {isError && (
+          {error && (
             <div className="alert alert-danger mt-4" role="alert">
               {getMessage(error)}
             </div>

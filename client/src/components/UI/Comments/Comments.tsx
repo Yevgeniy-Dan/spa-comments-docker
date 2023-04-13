@@ -1,4 +1,11 @@
-import React, { useEffect, useRef, useLayoutEffect, useState } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useLayoutEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import classnames from "classnames";
 import BootstrapTable from "react-bootstrap-table-next";
 
@@ -21,27 +28,84 @@ const Comments: React.FC = () => {
     sortOrder: "desc",
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const dispatch = useAppDispatch();
+
+  const firstCommentRef = useRef<any>(null);
+
+  const { readyToSend, previewCommentId, firstCommentY } = useAppSelector(
+    (state) => state.comments
+  );
+  const [previewId, setPreviewId] = useState<number | null>(null);
+
+  const previewCommentIdRef = useRef(previewCommentId);
+  const readyToSendRef = useRef(readyToSend);
 
   useEffect(() => {
-    const socket = io.connect(`${process.env.REACT_APP_API_BASE_URL}`, {
+    previewCommentIdRef.current = previewCommentId;
+  }, [previewCommentId]);
+
+  useEffect(() => {
+    readyToSendRef.current = readyToSend;
+  }, [readyToSend]);
+
+  const dispatch = useAppDispatch();
+
+  const socket = useMemo(() => {
+    return io.connect(`${process.env.REACT_APP_API_BASE_URL}`, {
       withCredentials: true,
     });
+  }, []);
 
-    const listener = (data: any) => {
-      if (data.action !== "addComment") return;
+  const listener = useCallback(
+    (data: any) => {
+      switch (data.action) {
+        case "getComments":
+          const updatedPage = Number(data.page);
+          if (updatedPage) {
+            setCurrentPage(updatedPage); //extra request, will need to be reconsidered
+          }
+          return;
+        case "addComment":
+          // Maybe we would Invalidate the cache for the 'getComments'
+          // when page from data.page will be equal to currentPage to
+          // prevent redundance reloade
 
-      // Invalidate the cache for the `getComments` endpoint
-      dispatch(apiSlice.util.invalidateTags(["Comment"]));
-    };
+          // Invalidate the cache for the `getComments` endpoint
+          // dispatch(commentSliceActions.setCommentFormData(null));
+          dispatch(apiSlice.util.invalidateTags(["Comment"]));
+          return;
+        case "addPreview":
+          if (data.previewId === previewCommentIdRef.current) {
+            setPreviewId(data.previewId); // Does not change the value on the second and subsequent requests
+            dispatch(apiSlice.util.invalidateTags(["Comment"])); //Therefore, we clearly invalidate the cache for the `getComments` endpoint
+          }
+          return;
 
-    socket.on("comments", listener);
+        case "deletePreviewComment":
+          if (data.outdatedPreviewId === previewCommentIdRef.current) {
+            dispatch(commentSliceActions.removePreviewComment());
+            setPreviewId(null);
+            if (readyToSendRef.current === "pending") {
+              dispatch(commentSliceActions.toggleReadyToSend("ready"));
+            }
+          }
+          return;
+        default:
+          return;
+      }
+    },
+    [dispatch, readyToSendRef, previewCommentIdRef]
+  );
 
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log("Connected to server: ", socket.connected);
+      socket.on("comments", listener);
+    });
     return () => {
-      socket.off("comments", listener);
-      socket.disconnect();
+      // socket.off("comments", listener);
+      // socket.disconnect();
     };
-  }, [dispatch]);
+  }, [socket, listener]);
 
   const {
     data: comments,
@@ -54,21 +118,12 @@ const Comments: React.FC = () => {
     {
       page: currentPage,
       sortParams: { ...sortParams },
+      previewId: previewId,
     },
     {
       refetchOnMountOrArgChange: true,
     }
   );
-
-  const firstCommentRef = useRef<any>(null);
-
-  const { previewComment, firstCommentY } = useAppSelector(
-    (state) => state.comments
-  );
-
-  // useEffect(() => {
-  //   if (currentPage > 1 && previewComment) setCurrentPage(1);
-  // }, [previewComment, currentPage]);
 
   useLayoutEffect(() => {
     const interval = setInterval(() => {
@@ -135,15 +190,11 @@ const Comments: React.FC = () => {
   const loadPosts = (direction: "previous" | "next") => {
     let page = currentPage;
     if (direction === "next") {
-      //request to database
       page++;
-      dispatch(commentSliceActions.removePreviewComment());
       setCurrentPage(page);
     }
     if (direction === "previous") {
-      //request to database
       page--;
-      dispatch(commentSliceActions.removePreviewComment());
       setCurrentPage(page);
     }
   };
@@ -176,7 +227,10 @@ const Comments: React.FC = () => {
 
             <Paginator
               currentPage={currentPage}
-              lastPage={Math.ceil(comments.totalItems / constants.perPage)}
+              lastPage={Math.max(
+                Math.ceil(comments.totalItems / constants.perPage),
+                1
+              )}
               onNext={() => {
                 window.scrollTo(0, firstCommentY);
                 loadPosts("next");
