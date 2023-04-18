@@ -1,6 +1,0 @@
-[submodule "backend"]
-	path = backend
-	url = https://github.com/Yevgeniy-Dan/spa-comments-server.git
-[submodule "frontend"]
-	path = frontend
-	url = https://github.com/Yevgeniy-Dan/spa-comments-client.git
