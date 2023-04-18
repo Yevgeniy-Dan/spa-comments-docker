@@ -79,7 +79,7 @@ const _CommentTree = (() => {
       // Create a map of each object's dependecies
       const dependencies = new Map();
 
-      let predecessorId = comments[0].id;
+      let predecessorId = comments[0]?.id;
       for (let i = 0; i < comments.length - 1; i++) {
         const isNextWithParentId = comments[i + 1].parentId;
         if (isNextWithParentId) {
