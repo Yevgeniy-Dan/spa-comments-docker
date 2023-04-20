@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Comment as CommentType } from "../../../types/comment";
 import CommentItem from "./CommentItem";
 import Attachments from "./Attachments";
 
 const RenderComment: React.FC<{
   comment: CommentType;
-  index: number;
   comments: CommentType[];
   depth: number;
-}> = ({ index, comment, comments, depth }) => {
+}> = ({ comment, comments, depth }) => {
   const children = comments
     .filter((n) => n.parentId === comment.id)
     .map((n) => {
@@ -28,9 +27,9 @@ const RenderComment: React.FC<{
     setIsOpenAttachments(comment.isOpenAttachments);
   }, [comment.isOpenAttachments]);
 
-  const onToggleAttachments = () => {
-    setIsOpenAttachments(!isOpenAttachments);
-  };
+  const onToggleAttachments = useCallback(() => {
+    setIsOpenAttachments((prev: boolean) => !prev);
+  }, []);
 
   // Assigning a code to an attachment will ensure that the useState hooks
   // for toggleImage and isOpenAttachments are always called in the same order
@@ -40,13 +39,16 @@ const RenderComment: React.FC<{
     <Attachments
       comment={comment}
       isOpen={isOpenAttachments}
-      onToggleImage={() => setToggleImage(!toggleImage)}
+      onToggleImage={useCallback(
+        () => setToggleImage((prev: boolean) => !prev),
+        []
+      )}
       toggleImage={toggleImage}
     />
   );
 
   return (
-    <div key={index} style={{ marginLeft }}>
+    <div style={{ marginLeft }}>
       <CommentItem
         comment={comment}
         onToggleAttachments={() => {
@@ -55,12 +57,12 @@ const RenderComment: React.FC<{
         isOpenAttachments={isOpenAttachments}
       />
       {attachments}
-      {children.map((child, childIndex) => (
+      {children.map((child) => (
         <RenderComment
+          key={child.id}
           comment={child}
           comments={comments}
           depth={depth + 1}
-          index={childIndex}
         />
       ))}
     </div>
@@ -78,10 +80,10 @@ const RenderComments: React.FC<
         .filter((c) => !c.parentId)
         .map((node, index) => (
           <RenderComment
+            key={node.id}
             comment={node}
             comments={comments}
             depth={0}
-            index={index}
           />
         ))}
     </div>

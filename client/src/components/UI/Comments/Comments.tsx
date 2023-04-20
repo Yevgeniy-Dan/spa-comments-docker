@@ -105,7 +105,7 @@ const Comments: React.FC = () => {
       // socket.off("comments", listener);
       // socket.disconnect();
     };
-  }, [socket, listener]);
+  }, [listener]);
 
   const {
     data: comments,
@@ -201,19 +201,19 @@ const Comments: React.FC = () => {
         <div ref={firstCommentRef}>
           <>
             <>
-              <BootstrapTable
+              {/* <BootstrapTable
                 bootstrap4
                 keyField="id"
                 bordered={false}
                 data={comments.comments}
                 columns={columns}
                 wrapperClasses="table-responsive"
-              />
+              /> */}
             </>
 
             <RenderComments comments={comments.comments} />
 
-            <Paginator
+            {/* <Paginator
               currentPage={currentPage}
               lastPage={Math.max(
                 Math.ceil(comments.totalItems / constants.perPage),
@@ -223,7 +223,7 @@ const Comments: React.FC = () => {
                 window.scrollTo(0, firstCommentY);
                 setCurrentPage(page);
               }}
-            />
+            /> */}
           </>
         </div>
       );
