@@ -22,7 +22,7 @@ if (process.env.NODE_ENV !== "production") {
 app.use(
   cors({
     credentials: true,
-    origin: process.env.CLIENT_ORIGIN,
+    origin: process.env.COMMENTS_CLIENT_ORIGIN,
   })
 );
 

@@ -5,7 +5,7 @@ module.exports = {
   init: (httpServer) => {
     io = new Server(httpServer, {
       cors: {
-        origin: process.env.CLIENT_ORIGIN,
+        origin: process.env.COMMENTS_CLIENT_ORIGIN,
         methods: ["GET", "POST"],
         credentials: true,
       },

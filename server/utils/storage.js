@@ -8,9 +8,9 @@ const sharp = require("sharp");
 const { v4: uuidv4 } = require("uuid");
 
 const s3 = new aws.S3({
-  apiVersion: process.env.AWS_API_VERSION,
-  accessKeyId: process.env.AWS_ACCESS_KEY,
-  secretAccessKey: process.env.AWS_SECRET_KEY,
+  apiVersion: process.env.COMMENTS_AWS_API_VERSION,
+  accessKeyId: process.env.COMMENTS_AWS_ACCESS_KEY,
+  secretAccessKey: process.env.COMMENTS_AWS_SECRET_KEY,
 });
 
 const fileStorage = multer.diskStorage({
@@ -49,7 +49,7 @@ exports.postFile = asyncHandler(async (req, res, next) => {
 
     let upload = {
       Key: `uploads/${uuidv4()}${path.extname(req.file.originalname)}`,
-      Bucket: process.env.AWS_BUCKET,
+      Bucket: process.env.COMMENTS_AWS_BUCKET,
       ACL: "public-read",
       ContentType: req.file.mimetype,
     };
